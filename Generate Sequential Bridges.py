@@ -41,12 +41,13 @@ def CreateSequentialBridges(ui, rootComp, face):
     sketch = rootComp.sketches.add(face)
 
     # Highligt entities for debugging
-    #sels: adsk.core.Selections = ui.activeSelections
-    #sels.clear()
-    #sels.add(face)
+    # sels: adsk.core.Selections = ui.activeSelections
+    # sels.clear()
+    # sels.add(face)
 
     curves = sketch.sketchCurves
             
+    disp(ui, curves.count)
     # Check if the proper geometry was selected
     if not curves.count >= 2:
         disp(ui, "One of the faces does not contain two curves!")
@@ -109,6 +110,109 @@ def CreateSequentialBridges(ui, rootComp, face):
 
     innerProfiles = adsk.core.ObjectCollection.create()
     outerProfiles = adsk.core.ObjectCollection.create()
+
+    #Arsenii'sTechnologies (fully constraining a skecth) ->
+    # Draw center rectangle around all lines with coincident points
+    min_x = min(xc - R, xc - r)
+    max_x = max(xc + R, xc + r)
+    min_y = min(yc - R, yc - r)
+    max_y = max(yc + R, yc + r)
+
+    pt1 = adsk.core.Point3D.create(min_x, min_y, zc)
+    pt2 = adsk.core.Point3D.create(max_x, min_y, zc)
+    pt3 = adsk.core.Point3D.create(max_x, max_y, zc)
+    pt4 = adsk.core.Point3D.create(min_x, max_y, zc)
+
+    rect_lines = []
+    rect_lines.append(lines.addByTwoPoints(pt1, pt2))
+    rect_lines.append(lines.addByTwoPoints(pt2, pt3))
+    rect_lines.append(lines.addByTwoPoints(pt3, pt4))
+    rect_lines.append(lines.addByTwoPoints(pt4, pt1))
+
+    constraints = sketch.geometricConstraints
+
+    constraints.addCoincident(rect_lines[0].endSketchPoint, rect_lines[1].startSketchPoint)
+    constraints.addCoincident(rect_lines[1].endSketchPoint, rect_lines[2].startSketchPoint)
+    constraints.addCoincident(rect_lines[2].endSketchPoint, rect_lines[3].startSketchPoint)
+    constraints.addCoincident(rect_lines[3].endSketchPoint, rect_lines[0].startSketchPoint)
+
+    # Make lines horizontal/vertical
+    constraints.addHorizontal(lineN)
+    constraints.addHorizontal(lineS)
+    constraints.addVertical(lineE)
+    constraints.addVertical(lineW)
+
+    # Make internal lines tangent to the circle
+    try:
+        print(c2)
+    except NameError:
+        print("my_var is not accessible")
+
+        constraints.addTangent(lineN, c1)
+        constraints.addTangent(lineS, c1)
+        constraints.addTangent(lineE, c1)
+        constraints.addTangent(lineW, c1)
+    else:
+        print("my_var exists and is accessible")
+
+        constraints.addTangent(lineN, c2)
+        constraints.addTangent(lineS, c2)
+        constraints.addTangent(lineE, c2)
+        constraints.addTangent(lineW, c2)
+
+
+    # Make rectangle sides horizontal/vertical
+    constraints.addHorizontal(rect_lines[0])  # bottom
+    constraints.addHorizontal(rect_lines[2])  # top
+    constraints.addVertical(rect_lines[1])    # right
+    constraints.addVertical(rect_lines[3])    # left
+
+    # Make all sides equal (convert to square)
+    constraints.addEqual(rect_lines[0], rect_lines[1])
+
+    # Add a diagonal construction line
+    diag_line = lines.addByTwoPoints(rect_lines[0].startSketchPoint, rect_lines[1].endSketchPoint)
+    diag_line.isConstruction = True
+
+    # Add a midpoint on a diagonal line
+    mid_x = (rect_lines[0].startSketchPoint.geometry.x + rect_lines[1].endSketchPoint.geometry.x) / 2
+    mid_y = (rect_lines[0].startSketchPoint.geometry.y + rect_lines[1].endSketchPoint.geometry.y) / 2
+    diag_midpoint = sketch.sketchPoints.add(adsk.core.Point3D.create(mid_x, mid_y, zc))
+
+    # Constrain the point to be the midpoint of the diagonal
+    constraints = sketch.geometricConstraints
+    constraints.addMidPoint(diag_midpoint, diag_line)
+
+    # Make the diagonal midpoint coincident with the circle center
+    constraints.addCoincident(diag_midpoint, c1.centerSketchPoint)
+
+    # Add a dimension to one square side matching internal line length
+    dims = sketch.sketchDimensions
+    side_length = lineN.length
+    dims.addDistanceDimension(
+        rect_lines[0].startSketchPoint,
+        rect_lines[0].endSketchPoint,
+        adsk.fusion.DimensionOrientations.HorizontalDimensionOrientation,
+        adsk.core.Point3D.create(xc, yc + R + 1, zc)  # place dimension slightly above
+    )
+
+    # Make internal lines endpoints coincident with square sides
+    constraints.addCoincident(lineN.startSketchPoint, rect_lines[3])  # lineN left end -> left side
+    constraints.addCoincident(lineN.endSketchPoint, rect_lines[1])    # lineN right end -> right side
+
+    constraints.addCoincident(lineS.startSketchPoint, rect_lines[3])  # lineS left end -> left side
+    constraints.addCoincident(lineS.endSketchPoint, rect_lines[1])    # lineS right end -> right side
+
+    constraints.addCoincident(lineE.startSketchPoint, rect_lines[0])  # lineE bottom end -> bottom side
+    constraints.addCoincident(lineE.endSketchPoint, rect_lines[2])    # lineE top end -> top side
+
+    constraints.addCoincident(lineW.startSketchPoint, rect_lines[0])  # lineW bottom end -> bottom side
+    constraints.addCoincident(lineW.endSketchPoint, rect_lines[2])    # lineW top end -> top side
+
+    #<- Arsenii'sTechnologies
+
+
+
 
     # Highlight stuff for debugging
     #sels.clear
