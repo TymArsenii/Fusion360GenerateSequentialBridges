@@ -41,13 +41,12 @@ def CreateSequentialBridges(ui, rootComp, face):
     sketch = rootComp.sketches.add(face)
 
     # Highligt entities for debugging
-    # sels: adsk.core.Selections = ui.activeSelections
-    # sels.clear()
-    # sels.add(face)
+    #sels: adsk.core.Selections = ui.activeSelections
+    #sels.clear()
+    #sels.add(face)
 
     curves = sketch.sketchCurves
             
-    disp(ui, curves.count)
     # Check if the proper geometry was selected
     if not curves.count >= 2:
         disp(ui, "One of the faces does not contain two curves!")
