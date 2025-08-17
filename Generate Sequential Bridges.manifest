@@ -1,7 +1,7 @@
 {
 	"autodeskProduct":	"Fusion",
 	"type":	"script",
-	"author":	"Mirza Cenanovic",
+	"author":	"Mirza Cenanovic, Arsenii Tymoshenko",
 	"description":	{
 		"":	"Create support geometry for overhanging holes when 3D printing."
 	},
